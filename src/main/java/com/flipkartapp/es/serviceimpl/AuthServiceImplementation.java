@@ -3,6 +3,7 @@ package com.flipkartapp.es.serviceimpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.flipkartapp.es.Exception.InvalidUserRoleException;
@@ -29,6 +30,9 @@ public class AuthServiceImplementation implements AuthService {
 
 	@Autowired
 	CustomerRepository customerRepo;
+	
+	@Autowired
+	private PasswordEncoder passwordEncoder;
 
 	@Autowired
 	ResponseStructure<UserResponse> structure;
@@ -53,7 +57,7 @@ public class AuthServiceImplementation implements AuthService {
 		}
 
 		user.setEmail(userRequest.getEmail());
-		user.setPassword(userRequest.getPassword());
+		user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
 
 		return (T) user;
 	}
