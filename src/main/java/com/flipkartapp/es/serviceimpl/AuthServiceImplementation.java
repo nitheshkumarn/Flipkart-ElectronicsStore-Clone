@@ -118,13 +118,6 @@ public class AuthServiceImplementation implements AuthService {
 				e.printStackTrace();
 			}
 
-			try {
-				confirmMail(user);
-			} catch (MessagingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
 		} else {
 			throw new UserAlreadyRegisteredException("User already registered with the given Email");
 		}
@@ -156,6 +149,13 @@ public class AuthServiceImplementation implements AuthService {
 
 		user.setEmailVerified(true);
 		userRepo.save(user);
+
+		try {
+			confirmMail(user);
+		} catch (MessagingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		structure.setStatus(HttpStatus.CREATED.value()).setMessage("User registered successfully")
 				.setData(mapToUserResponse(user));
 
