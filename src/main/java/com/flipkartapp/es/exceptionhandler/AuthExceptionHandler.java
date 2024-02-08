@@ -8,7 +8,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import com.flipkartapp.es.Exception.InvalidOtpException;
 import com.flipkartapp.es.Exception.InvalidUserRoleException;
+import com.flipkartapp.es.Exception.OtpExpiredException;
+import com.flipkartapp.es.Exception.SessionExpiredException;
 import com.flipkartapp.es.Exception.UserAlreadyRegisteredException;
 
 @RestControllerAdvice
@@ -27,6 +30,21 @@ public class AuthExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(InvalidUserRoleException.class)
 	public ResponseEntity<Object> handleInvalidUserRoleException(InvalidUserRoleException exception) {
 		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "Enter proper user role");
+	}
+	
+	@ExceptionHandler(SessionExpiredException.class)
+	public ResponseEntity<Object> handleSessionExpiredException(SessionExpiredException exception) {
+		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "Session has been expired");
+	}
+	
+	@ExceptionHandler(OtpExpiredException.class)
+	public ResponseEntity<Object> handleotpExpiredException(OtpExpiredException exception) {
+		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "OTP has expired");
+	}
+	
+	@ExceptionHandler(InvalidOtpException.class)
+	public ResponseEntity<Object> handleInvalidOtpException(InvalidOtpException exception) {
+		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "Incorrect OTP entered");
 	}
 
 }

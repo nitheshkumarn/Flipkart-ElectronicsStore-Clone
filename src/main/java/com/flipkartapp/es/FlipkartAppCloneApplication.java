@@ -12,5 +12,4 @@ public class FlipkartAppCloneApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(FlipkartAppCloneApplication.class, args);
 	}
-
 }
