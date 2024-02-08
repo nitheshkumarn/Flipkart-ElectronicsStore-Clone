@@ -5,6 +5,9 @@ import java.util.Random;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -24,7 +27,11 @@ import com.flipkartapp.es.requestdto.OTPModel;
 import com.flipkartapp.es.requestdto.UserRequest;
 import com.flipkartapp.es.responsedto.UserResponse;
 import com.flipkartapp.es.service.AuthService;
+import com.flipkartapp.es.util.MessageStructure;
 import com.flipkartapp.es.util.ResponseStructure;
+
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 
 @Service
 public class AuthServiceImplementation implements AuthService {
@@ -49,6 +56,9 @@ public class AuthServiceImplementation implements AuthService {
 
 	@Autowired
 	CacheStore<User> userCacheStore;
+
+	@Autowired
+	private JavaMailSender javaMailSender;
 
 	@SuppressWarnings("unchecked")
 	<T extends User> T mapToUser(UserRequest userRequest) {
@@ -94,7 +104,6 @@ public class AuthServiceImplementation implements AuthService {
 
 			user = mapToUser(userRequest);
 			user.setUserName(userRequest.getEmail().split("@")[0]);
-			
 
 			userCacheStore.add(userRequest.getEmail(), user);
 			otpCacheStore.add(userRequest.getEmail(), OTP);
@@ -131,9 +140,21 @@ public class AuthServiceImplementation implements AuthService {
 		user.setEmailVerified(true);
 		userRepo.save(user);
 		structure.setStatus(HttpStatus.CREATED.value()).setMessage("User registered successfully")
-		.setData(mapToUserResponse(user));
+				.setData(mapToUserResponse(user));
 
-return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.CREATED);
+		return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus.CREATED);
+	}
+
+	@Async
+	private void sendMail(MessageStructure message) throws MessagingException {
+		MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+		MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
+		helper.setTo(message.getTo());
+		helper.setSubject(message.getSubject());
+		helper.setSentDate(message.getSentDate());
+		helper.setText(message.getText());
+		javaMailSender.send(mimeMessage);
+
 	}
 
 	private String generateOTP() {
@@ -143,5 +164,4 @@ return new ResponseEntity<ResponseStructure<UserResponse>>(structure, HttpStatus
 
 		return String.valueOf(new Random().nextInt(100000, 999999));
 	}
-
 }
