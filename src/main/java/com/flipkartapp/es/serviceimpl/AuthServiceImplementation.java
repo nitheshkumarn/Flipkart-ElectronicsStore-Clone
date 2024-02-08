@@ -1,5 +1,6 @@
 package com.flipkartapp.es.serviceimpl;
 
+import java.util.Date;
 import java.util.Random;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,8 +33,10 @@ import com.flipkartapp.es.util.ResponseStructure;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class AuthServiceImplementation implements AuthService {
 
 	@Autowired
@@ -108,6 +111,20 @@ public class AuthServiceImplementation implements AuthService {
 			userCacheStore.add(userRequest.getEmail(), user);
 			otpCacheStore.add(userRequest.getEmail(), OTP);
 
+			try {
+				sendOTPToMail(user, OTP);
+			} catch (MessagingException e) {
+				log.error("The Email Address doesnt exist");
+				e.printStackTrace();
+			}
+
+			try {
+				confirmMail(user);
+			} catch (MessagingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
 		} else {
 			throw new UserAlreadyRegisteredException("User already registered with the given Email");
 		}
@@ -152,9 +169,25 @@ public class AuthServiceImplementation implements AuthService {
 		helper.setTo(message.getTo());
 		helper.setSubject(message.getSubject());
 		helper.setSentDate(message.getSentDate());
-		helper.setText(message.getText());
+		helper.setText(message.getText(), true);
 		javaMailSender.send(mimeMessage);
 
+	}
+
+	private void sendOTPToMail(User user, String otp) throws MessagingException {
+		sendMail(MessageStructure.builder().to(user.getEmail()).subject("Complete Your Registeration to Flipkart ")
+				.sentDate(new Date())
+				.text("hey, " + user.getUserName() + "Good to see you interested in FlipKart, "
+						+ "Complete your Registeration using the OTP <br>" + "<h1>" + otp + "</h1><br>"
+						+ "Note: the OTP expires in 1 minute" + "<br><br>" + "with best regards<br>" + "FlipKart")
+				.build());
+	}
+
+	private void confirmMail(User user) throws MessagingException {
+		sendMail(MessageStructure
+				.builder().to(user.getEmail()).subject("Registeration complete ").sentDate(new Date()).text("Namaste, "
+						+ user.getUserName() + "You have been registerd successfully to the <h1>FlipKart</h1>")
+				.build());
 	}
 
 	private String generateOTP() {
