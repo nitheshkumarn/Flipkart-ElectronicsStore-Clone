@@ -4,6 +4,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
@@ -45,6 +46,11 @@ public class AuthExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(InvalidOtpException.class)
 	public ResponseEntity<Object> handleInvalidOtpException(InvalidOtpException exception) {
 		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "Incorrect OTP entered");
+	}
+	
+	@ExceptionHandler(UsernameNotFoundException.class)
+	public ResponseEntity<Object> handleUsernameNotFoundException(UsernameNotFoundException exception) {
+		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "Authentication of User is failed");
 	}
 
 }
