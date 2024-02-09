@@ -28,8 +28,7 @@ import lombok.Setter;
 @Inheritance(strategy = InheritanceType.JOINED)
 @Table(name="users")
 public class User {
-	
-	@Id
+	@jakarta.persistence.Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	int userId;
 	String userName;
