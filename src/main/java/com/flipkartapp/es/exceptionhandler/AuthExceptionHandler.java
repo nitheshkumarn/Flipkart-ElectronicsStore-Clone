@@ -14,6 +14,7 @@ import com.flipkartapp.es.Exception.InvalidUserRoleException;
 import com.flipkartapp.es.Exception.OtpExpiredException;
 import com.flipkartapp.es.Exception.SessionExpiredException;
 import com.flipkartapp.es.Exception.UserAlreadyRegisteredException;
+import com.flipkartapp.es.Exception.UserNotLoggedInException;
 
 @RestControllerAdvice
 public class AuthExceptionHandler extends ResponseEntityExceptionHandler {
@@ -51,6 +52,11 @@ public class AuthExceptionHandler extends ResponseEntityExceptionHandler {
 	@ExceptionHandler(UsernameNotFoundException.class)
 	public ResponseEntity<Object> handleUsernameNotFoundException(UsernameNotFoundException exception) {
 		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "Authentication of User is failed");
+	}
+	
+	@ExceptionHandler(UserNotLoggedInException.class)
+	public ResponseEntity<Object> handleUserNotLoggedIn(UserNotLoggedInException exception) {
+		return structure(HttpStatus.NOT_FOUND, exception.getMessage(), "User not logged in");
 	}
 
 }

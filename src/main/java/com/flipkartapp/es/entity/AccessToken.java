@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,5 +26,8 @@ public class AccessToken {
 	private String token;
 	private boolean isBlocked;
 	private LocalDateTime expiration;
+	
+	@ManyToOne
+	User user;
 
 }

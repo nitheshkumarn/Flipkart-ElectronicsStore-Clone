@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Random;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +22,7 @@ import com.flipkartapp.es.Exception.InvalidUserRoleException;
 import com.flipkartapp.es.Exception.OtpExpiredException;
 import com.flipkartapp.es.Exception.SessionExpiredException;
 import com.flipkartapp.es.Exception.UserAlreadyRegisteredException;
+import com.flipkartapp.es.Exception.UserNotLoggedInException;
 import com.flipkartapp.es.cache.CacheStore;
 import com.flipkartapp.es.entity.AccessToken;
 import com.flipkartapp.es.entity.Customer;
@@ -44,10 +44,12 @@ import com.flipkartapp.es.service.AuthService;
 import com.flipkartapp.es.util.CookieManager;
 import com.flipkartapp.es.util.MessageStructure;
 import com.flipkartapp.es.util.ResponseStructure;
+import com.flipkartapp.es.util.SimpleResponseStructure;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
@@ -55,44 +57,37 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AuthServiceImplementation implements AuthService {
 
-	
 	UserRepository userRepo;
 
-	
 	SellerRepository sellerRepo;
 
-	
 	CustomerRepository customerRepo;
 
-	
 	private PasswordEncoder passwordEncoder;
 
-	
 	ResponseStructure<UserResponse> structure;
 
-	
+	ResponseStructure<HttpServletResponse> rs;
+
 	private ResponseStructure<AuthResponse> authStructure;
 
-	
 	CacheStore<String> otpCacheStore;
 
-	
 	CacheStore<User> userCacheStore;
-
 
 	private JavaMailSender javaMailSender;
 
-	
 	private AuthenticationManager authenticationManager;
 
 	private CookieManager cookieManager;
 
 	private JwtService jwtService;
 
-	
 	private AccessTokenRepository accessTRepo;
-	
-	private RefreshTokenRepository refreshTrepo;
+
+	private RefreshTokenRepository refreshTRepo;
+
+	private ResponseStructure<SimpleResponseStructure> srs;
 
 	@Value("${myapp.access.expiry}")
 	private int accessExpiryInSeconds;
@@ -102,10 +97,10 @@ public class AuthServiceImplementation implements AuthService {
 
 	public AuthServiceImplementation(UserRepository userRepo, SellerRepository sellerRepo,
 			CustomerRepository customerRepo, PasswordEncoder passwordEncoder, ResponseStructure<UserResponse> structure,
-			ResponseStructure<AuthResponse> authStructure, CacheStore<String> otpCacheStore,
-			CacheStore<User> userCacheStore, JavaMailSender javaMailSender, AuthenticationManager authenticationManager,
-			CookieManager cookieManager, JwtService jwtService, AccessTokenRepository accessTRepo,
-			RefreshTokenRepository refreshTRepo) {
+			ResponseStructure<HttpServletResponse> rs, ResponseStructure<AuthResponse> authStructure,
+			CacheStore<String> otpCacheStore, CacheStore<User> userCacheStore, JavaMailSender javaMailSender,
+			AuthenticationManager authenticationManager, CookieManager cookieManager, JwtService jwtService,
+			ResponseStructure<SimpleResponseStructure>  srs, AccessTokenRepository accessTRepo, RefreshTokenRepository refreshTRepo) {
 		super();
 		this.userRepo = userRepo;
 		this.sellerRepo = sellerRepo;
@@ -119,8 +114,10 @@ public class AuthServiceImplementation implements AuthService {
 		this.cookieManager = cookieManager;
 		this.jwtService = jwtService;
 		this.accessTRepo = accessTRepo;
-		this.refreshTrepo = refreshTRepo;
+		this.refreshTRepo = refreshTRepo;
 		this.authStructure = authStructure;
+		this.rs = rs;
+		this.srs = srs;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -242,6 +239,62 @@ public class AuthServiceImplementation implements AuthService {
 
 	}
 
+	@Override
+	public ResponseEntity<ResponseStructure<HttpServletResponse>> logoutTraditional(HttpServletRequest req,
+			HttpServletResponse resp) {
+
+		String rt = null;
+		String at = null;
+		Cookie[] cookies = req.getCookies();
+
+		for (Cookie cookie : cookies) {
+			if (cookie.getName().equals("rt"))
+				rt = cookie.getValue();
+			if (cookie.getName().equals("at"))
+				at = cookie.getValue();
+		}
+		accessTRepo.findByToken(at).ifPresent(accessToken -> {
+			accessToken.setBlocked(true);
+			accessTRepo.save(accessToken);
+		});
+		refreshTRepo.findByToken(rt).ifPresent(refreshToken -> {
+			refreshToken.setBlocked(true);
+			refreshTRepo.save(refreshToken);
+		});
+
+		resp.addCookie(cookieManager.invalidate(new Cookie(at, "")));
+		resp.addCookie(cookieManager.invalidate(new Cookie(rt, "")));
+
+		rs.setData(resp);
+		rs.setMessage("Cookie invalidated");
+		rs.setStatus(HttpStatus.OK.value());
+		return new ResponseEntity<ResponseStructure<HttpServletResponse>>(rs, HttpStatus.OK);
+	}
+
+	@Override
+	public  ResponseEntity<ResponseStructure<SimpleResponseStructure>> logout(String at, String rt, HttpServletResponse resp) {
+		System.out.println("hitting");
+		if (at == null && rt == null)
+			throw new UserNotLoggedInException("Please LogIn");
+
+		accessTRepo.findByToken(at).ifPresent(accessToken -> {
+			System.out.println(accessToken);
+			accessToken.setBlocked(true);
+			accessTRepo.save(accessToken);
+		});
+		refreshTRepo.findByToken(rt).ifPresent(refreshToken -> {
+			refreshToken.setBlocked(true);
+			refreshTRepo.save(refreshToken);
+		});
+
+		resp.addCookie(cookieManager.invalidate(new Cookie(at, "")));
+		resp.addCookie(cookieManager.invalidate(new Cookie(rt, "")));
+		
+		srs.setMessage("Invalidated user");
+		srs.setStatus(HttpStatus.OK.value());
+		return new ResponseEntity<ResponseStructure<SimpleResponseStructure>>(srs, HttpStatus.OK);
+	}
+
 	private AuthResponse mapToAuthResponse(User user) {
 		return AuthResponse.builder().userId(user.getUserId()).username(user.getUserName()).isAuthenticated(true)
 				.role(user.getUserRole().name())
@@ -259,7 +312,6 @@ public class AuthServiceImplementation implements AuthService {
 		helper.setSentDate(message.getSentDate());
 		helper.setText(message.getText(), true);
 		javaMailSender.send(mimeMessage);
-
 	}
 
 	private void sendOTPToMail(User user, String otp) throws MessagingException {
@@ -299,7 +351,7 @@ public class AuthServiceImplementation implements AuthService {
 		accessTRepo.save(AccessToken.builder().token(accessToken).isBlocked(false)
 				.expiration(LocalDateTime.now().plusMinutes(accessExpiryInSeconds)).build());
 
-		refreshTrepo.save(RefreshToken.builder().token(refreshToken).isBlocked(false)
+		refreshTRepo.save(RefreshToken.builder().token(refreshToken).isBlocked(false)
 				.expiration(LocalDateTime.now().plusMinutes(refreshExpiryInSeconds)).build());
 	}
 

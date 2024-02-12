@@ -8,15 +8,22 @@ import com.flipkartapp.es.requestdto.UserRequest;
 import com.flipkartapp.es.responsedto.AuthResponse;
 import com.flipkartapp.es.responsedto.UserResponse;
 import com.flipkartapp.es.util.ResponseStructure;
+import com.flipkartapp.es.util.SimpleResponseStructure;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 public interface AuthService {
 
 	ResponseEntity<ResponseStructure<UserResponse>> registerUser(UserRequest userRequest);
 	
-	public ResponseEntity<ResponseStructure<UserResponse>> verifyOTP(OTPModel otpmODEL);
+	ResponseEntity<ResponseStructure<UserResponse>> verifyOTP(OTPModel otpmODEL);
 
 	ResponseEntity<ResponseStructure<AuthResponse>> login(AuthRequest authRequest,HttpServletResponse response);
+
+	ResponseEntity<ResponseStructure<HttpServletResponse>> logoutTraditional(HttpServletRequest req, HttpServletResponse resp);
+
+	 ResponseEntity<ResponseStructure<SimpleResponseStructure>> logout(String accessToken, String refreshToken,
+			HttpServletResponse resp);
 
 }
