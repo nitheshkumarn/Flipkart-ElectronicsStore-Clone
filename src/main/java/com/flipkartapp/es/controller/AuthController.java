@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.flipkartapp.es.requestdto.AuthRequest;
@@ -21,9 +22,11 @@ import lombok.AllArgsConstructor;
 
 @RestController
 @AllArgsConstructor
+
+@RequestMapping("/api/v1")
 public class AuthController {
 
-	AuthService as;
+	private AuthService as;
 
 	@PostMapping("/users/register")
 	public ResponseEntity<ResponseStructure<UserResponse>> registerUser(@RequestBody UserRequest userRequest) {
@@ -47,7 +50,8 @@ public class AuthController {
 	}
 	
 	@PostMapping("/logout")
-	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> logout(@CookieValue(name = "accessToken", required = false) String accessToken, @CookieValue(name = "refreshToken", required = false) String refreshToken, HttpServletResponse resp ){
+	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> logout(@CookieValue(name = "at", required = false) String accessToken, @CookieValue(name = "rt", required = false) String refreshToken, HttpServletResponse resp ){
+		System.out.println("logging out");
 		return as.logout(accessToken, refreshToken, resp);
 	}
 	
