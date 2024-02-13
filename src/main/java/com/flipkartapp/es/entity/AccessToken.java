@@ -28,6 +28,6 @@ public class AccessToken {
 	private LocalDateTime expiration;
 	
 	@ManyToOne
-	User user;
+	private User user;
 
 }

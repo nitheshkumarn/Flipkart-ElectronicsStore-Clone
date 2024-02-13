@@ -2,10 +2,12 @@ package com.flipkartapp.es.serviceimpl;
 
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
 import java.util.Random;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -13,6 +15,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -87,7 +90,7 @@ public class AuthServiceImplementation implements AuthService {
 
 	private RefreshTokenRepository refreshTRepo;
 
-	private ResponseStructure<SimpleResponseStructure> srs;
+	private SimpleResponseStructure srs;
 
 	@Value("${myapp.access.expiry}")
 	private int accessExpiryInSeconds;
@@ -100,7 +103,7 @@ public class AuthServiceImplementation implements AuthService {
 			ResponseStructure<HttpServletResponse> rs, ResponseStructure<AuthResponse> authStructure,
 			CacheStore<String> otpCacheStore, CacheStore<User> userCacheStore, JavaMailSender javaMailSender,
 			AuthenticationManager authenticationManager, CookieManager cookieManager, JwtService jwtService,
-			ResponseStructure<SimpleResponseStructure>  srs, AccessTokenRepository accessTRepo, RefreshTokenRepository refreshTRepo) {
+			SimpleResponseStructure srs, AccessTokenRepository accessTRepo, RefreshTokenRepository refreshTRepo) {
 		super();
 		this.userRepo = userRepo;
 		this.sellerRepo = sellerRepo;
@@ -272,7 +275,7 @@ public class AuthServiceImplementation implements AuthService {
 	}
 
 	@Override
-	public  ResponseEntity<ResponseStructure<SimpleResponseStructure>> logout(String at, String rt, HttpServletResponse resp) {
+	public ResponseEntity<SimpleResponseStructure> logout(String at, String rt, HttpServletResponse resp) {
 		System.out.println("hitting");
 		if (at == null && rt == null)
 			throw new UserNotLoggedInException("Please LogIn");
@@ -289,10 +292,10 @@ public class AuthServiceImplementation implements AuthService {
 
 		resp.addCookie(cookieManager.invalidate(new Cookie(at, "")));
 		resp.addCookie(cookieManager.invalidate(new Cookie(rt, "")));
-		
+
 		srs.setMessage("Invalidated user");
 		srs.setStatus(HttpStatus.OK.value());
-		return new ResponseEntity<ResponseStructure<SimpleResponseStructure>>(srs, HttpStatus.OK);
+		return new ResponseEntity<SimpleResponseStructure>(srs, HttpStatus.OK);
 	}
 
 	private AuthResponse mapToAuthResponse(User user) {
@@ -354,5 +357,53 @@ public class AuthServiceImplementation implements AuthService {
 		refreshTRepo.save(RefreshToken.builder().token(refreshToken).isBlocked(false)
 				.expiration(LocalDateTime.now().plusMinutes(refreshExpiryInSeconds)).build());
 	}
+	
+	@Override
+	public ResponseEntity<SimpleResponseStructure> revokeAll(){
+		
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		
+		return userRepo.findByUserName(username)
+				.map(user -> {
+					
+					blockAccessToken(accessTRepo.findByUserAndIsBlocked(user, false));
+					blockRefreshToken(refreshTRepo.findByUserAndIsBlocked(user, false));
+					
+					srs.setMessage(" Revoked From all devices");
+					srs.setStatus(HttpStatus.OK.value());
+					return new ResponseEntity<SimpleResponseStructure>(srs,HttpStatus.OK);
+				})
+				.orElseThrow(() -> new UsernameNotFoundException("User not found"));
+		
+	}
+	
+	@Override
+	public ResponseEntity<SimpleResponseStructure> revokeOther(String accessToken, String refreshToken, HttpServletResponse response) {
+		String username = SecurityContextHolder.getContext().getAuthentication().getName();
+		userRepo.findByUserName(username).ifPresent(user -> {
+			blockAccessToken(accessTRepo.findAllByUserAndIsBlockedAndTokenNot(user,false, accessToken));
+			blockRefreshToken(refreshTRepo.findAllByUserAndIsBlockedAndTokenNot(user,false,refreshToken));
+		});
+		srs.setMessage(" Revoked other devices ");
+		srs.setStatus(HttpStatus.OK.value());
+		
+		return new ResponseEntity<SimpleResponseStructure>(srs,HttpStatus.OK);
+	
+		}
+	
+	private void blockAccessToken(List<AccessToken> accessToken) {
+		accessToken.forEach(at -> {
+			at.setBlocked(true);
+			accessTRepo.save(at);
+		});
+	}
+	
+	private void blockRefreshToken(List<RefreshToken> refreshToken) {
+		refreshToken.forEach(rt ->{
+			rt.setBlocked(true);
+			refreshTRepo.save(rt);
+		});
+	}
+	
 
 }
