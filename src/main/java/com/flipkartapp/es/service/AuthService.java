@@ -23,7 +23,12 @@ public interface AuthService {
 
 	ResponseEntity<ResponseStructure<HttpServletResponse>> logoutTraditional(HttpServletRequest req, HttpServletResponse resp);
 
-	 ResponseEntity<ResponseStructure<SimpleResponseStructure>> logout(String accessToken, String refreshToken,
+	 ResponseEntity<SimpleResponseStructure> logout(String accessToken, String refreshToken,
 			HttpServletResponse resp);
+
+	ResponseEntity<SimpleResponseStructure> revokeOther(String accessToken, String refreshToken,
+			HttpServletResponse response);
+
+	ResponseEntity<SimpleResponseStructure> revokeAll();
 
 }

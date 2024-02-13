@@ -1,8 +1,10 @@
 package com.flipkartapp.es.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,18 +43,33 @@ public class AuthController {
 	@PostMapping("/login")
 	public ResponseEntity<ResponseStructure<AuthResponse>> login(@RequestBody AuthRequest authRequest,
 			HttpServletResponse response) {
-		return as.login(authRequest,response);
+		return as.login(authRequest, response);
 	}
-	
+
 	@PostMapping("/logout-traditional")
-	public ResponseEntity<ResponseStructure<HttpServletResponse>> logoutTraditional(HttpServletResponse resp, HttpServletRequest req){
-		return as.logoutTraditional(req,resp);
+	public ResponseEntity<ResponseStructure<HttpServletResponse>> logoutTraditional(HttpServletResponse resp,
+			HttpServletRequest req) {
+		return as.logoutTraditional(req, resp);
 	}
-	
+
+	@PreAuthorize("hasAuthority('CUSTOMER') OR hasAuthority('SELLER')")
 	@PostMapping("/logout")
-	public ResponseEntity<ResponseStructure<SimpleResponseStructure>> logout(@CookieValue(name = "at", required = false) String accessToken, @CookieValue(name = "rt", required = false) String refreshToken, HttpServletResponse resp ){
+	public ResponseEntity<SimpleResponseStructure> logout(
+			@CookieValue(name = "at", required = false) String accessToken,
+			@CookieValue(name = "rt", required = false) String refreshToken, HttpServletResponse resp) {
 		System.out.println("logging out");
 		return as.logout(accessToken, refreshToken, resp);
 	}
+
+	@PutMapping("/revokeother")
+	ResponseEntity<SimpleResponseStructure> revokeOther(String accessToken, String refreshToken,
+			HttpServletResponse response) {
+		return as.revokeOther(accessToken, refreshToken, response);
+	}
 	
+	@PutMapping("/revokeall")
+	ResponseEntity<SimpleResponseStructure> revokeAll(){
+		return as.revokeAll();
+	}
+
 }
