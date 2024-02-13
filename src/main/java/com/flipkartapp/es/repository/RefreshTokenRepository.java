@@ -6,7 +6,6 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.flipkartapp.es.entity.AccessToken;
 import com.flipkartapp.es.entity.RefreshToken;
 import com.flipkartapp.es.entity.User;
 

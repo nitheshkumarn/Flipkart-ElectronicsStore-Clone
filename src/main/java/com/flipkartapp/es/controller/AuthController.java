@@ -41,9 +41,10 @@ public class AuthController {
 	}
 
 	@PostMapping("/login")
-	public ResponseEntity<ResponseStructure<AuthResponse>> login(@RequestBody AuthRequest authRequest,
+	public ResponseEntity<ResponseStructure<AuthResponse>> login(@CookieValue(name = "at", required = false) String accessToken,
+			@CookieValue(name = "rt", required = false) String refreshToken, @RequestBody AuthRequest authRequest,
 			HttpServletResponse response) {
-		return as.login(authRequest, response);
+		return as.login(accessToken, refreshToken, authRequest, response);
 	}
 
 	@PostMapping("/logout-traditional")
@@ -70,6 +71,13 @@ public class AuthController {
 	@PutMapping("/revokeall")
 	ResponseEntity<SimpleResponseStructure> revokeAll(){
 		return as.revokeAll();
+	}
+	
+	@PutMapping("token-rotation")
+	ResponseEntity<SimpleResponseStructure> refreshLoginAndTokenRotate(@CookieValue(name = "at", required = false) String accessToken,
+			@CookieValue(name = "rt", required = false) String refreshToken,
+			HttpServletResponse response){
+		return as.refreshLoginAndTokenRotate(accessToken, refreshToken,  response);
 	}
 
 }
